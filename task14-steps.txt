@@ -1,0 +1,150 @@
+Task 14 – CloudKicker (Flask + Nginx Reverse Proxy)
+
+Cloud: AWS EC2
+OS: Ubuntu 22.04
+Public IP: 51.20.183.172
+
+---
+
+1. Create EC2 Instance
+
+• Launch EC2 instance in AWS
+• AMI: Ubuntu 22.04 LTS
+• Instance type: t2.micro
+• Create key pair: cloudkicker-key.pem
+• Allow SSH (Port 22)
+• Launch instance and copy Public IP
+
+---
+
+2. SSH from Kali
+
+cd ~/Downloads
+chmod 400 cloudkicker-key.pem
+
+ssh -i cloudkicker-key.pem ubuntu@51.20.183.172
+
+(Screenshot: SSH Login)
+
+---
+
+3. Install Required Packages
+
+sudo apt update
+sudo apt upgrade -y
+
+sudo apt install git python3 python3-venv python3-pip nginx -y
+
+Verify:
+
+git --version
+python3 --version
+nginx -v
+
+---
+
+4. Clone Flask Repository
+
+cd ~
+
+git clone https://github.com/YOUR_GITHUB_USERNAME/12-fsd-flask.git
+
+cd 12-fsd-flask
+ls
+
+---
+
+5. Create Virtual Environment
+
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+---
+
+6. Run Flask Locally
+
+python3 app.py
+
+Flask runs on:
+
+http://127.0.0.1:5000
+
+Test:
+
+curl http://127.0.0.1:5000
+
+---
+
+7. Configure Nginx Reverse Proxy
+
+sudo nano /etc/nginx/sites-available/flaskapp
+
+Add:
+
+server {
+listen 80;
+server_name 51.20.183.172;
+
+```
+location / {
+    proxy_pass http://127.0.0.1:5000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+}
+
+Enable site:
+
+sudo ln -s /etc/nginx/sites-available/flaskapp /etc/nginx/sites-enabled/
+
+sudo rm /etc/nginx/sites-enabled/default
+
+sudo nginx -t
+sudo systemctl restart nginx
+
+---
+
+8. Open HTTP Port
+
+AWS Security Group → Add rule:
+
+HTTP | TCP | Port 80 | 0.0.0.0/0
+
+---
+
+9. Test Public Access
+
+curl http://localhost
+curl http://51.20.183.172
+
+Open browser:
+
+http://51.20.183.172
+
+(Screenshot: Public site)
+
+---
+
+10. Test Application
+
+Open:
+
+http://51.20.183.172/register
+http://51.20.183.172/login
+
+Register new user (Screenshot)
+Login and reach dashboard (Screenshot)
+
+---
+
+Architecture:
+
+Internet → Nginx (Port 80) → Flask (127.0.0.1:5000)
+
+Flask is not publicly exposed.
